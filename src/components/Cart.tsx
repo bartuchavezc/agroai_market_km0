@@ -33,6 +33,7 @@ export function Cart({ catalog }: { catalog: Catalog }) {
   const cart = useStore((s) => s.cart);
   const recurring = useStore((s) => s.recurring);
   const saved = useStore((s) => s.buyer);
+  const myPlace = useStore((s) => s.place);
   const [checkout, setCheckout] = useState(false);
   const [buyer, setBuyer] = useState<Buyer>({ name: "", email: "", phone: "", kind: "restaurante", address: "" });
   const set = (patch: Partial<Buyer>) => setBuyer((b) => ({ ...b, ...patch }));
@@ -171,7 +172,8 @@ export function Cart({ catalog }: { catalog: Catalog }) {
       )}
       {!checkout && (
         <button className="btn btn-primary btn-block" disabled={live.length === 0} onClick={() => {
-            if (saved && !buyer.name) setBuyer(saved); // the details used last time, from this browser
+            const base = saved && !buyer.name ? saved : buyer; // the details used last time, from this browser
+            setBuyer(base.address || !myPlace?.address ? base : { ...base, address: myPlace.address }); // or the address just searched
             setCheckout(true);
           }} style={{ padding: 14, fontSize: 15 }}>
           Confirmar pedido

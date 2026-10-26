@@ -20,10 +20,19 @@ const MAX_ZOOM = 15;
 
 interface Props {
   producers: Producer[];
-  me: { lat: number; lng: number; label: string };
+  /** The buyer's kitchen; null until they set it. */
+  me: { lat: number; lng: number; label: string } | null;
   selected: string | null;
   onSelect: (id: string) => void;
+  /** The buyer dragged their pin to correct where it is. */
+  onMoveMe?: (lat: number, lng: number) => void;
 }
+
+/** Only a viewport for an empty map (no farms, no place yet): never used as anyone's location. */
+const EMPTY_VIEW: L.LatLngTuple = [
+  Number(process.env.NEXT_PUBLIC_MAP_CENTER_LAT ?? -34.6037),
+  Number(process.env.NEXT_PUBLIC_MAP_CENTER_LNG ?? -58.3816),
+];
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
@@ -45,19 +54,22 @@ const meIcon = (label: string) =>
     iconAnchor: [13, 13],
   });
 
-export function MapboxMap({ producers, me, selected, onSelect }: Props) {
+export function MapboxMap({ producers, me, selected, onSelect, onMoveMe }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const layer = useRef<L.LayerGroup | null>(null);
   const select = useRef(onSelect);
+  const move = useRef(onMoveMe);
 
   useEffect(() => {
     select.current = onSelect;
-  }, [onSelect]);
+    move.current = onMoveMe;
+  }, [onSelect, onMoveMe]);
 
   useEffect(() => {
     if (!container.current) return;
-    const instance = L.map(container.current, { zoomControl: true, scrollWheelZoom: false, maxZoom: MAX_ZOOM, attributionControl: true });
+    const instance = L.map(container.current, { zoomControl: true, scrollWheelZoom: false, maxZoom: MAX_ZOOM, attributionControl: true })
+      .setView(EMPTY_VIEW, 11);
     const custom = process.env.NEXT_PUBLIC_MAP_TILES_URL; // any standard 256 px XYZ template
     if (custom) {
       L.tileLayer(custom, { maxZoom: MAX_ZOOM, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(instance);
@@ -76,12 +88,13 @@ export function MapboxMap({ producers, me, selected, onSelect }: Props) {
   }, []);
 
   // Fit the buyer and every farm whenever the set or the buyer's place changes.
-  const key = `${me.lat},${me.lng}|${producers.map((p) => p.id).join(",")}`;
+  const key = `${me ? `${me.lat},${me.lng}` : "-"}|${producers.map((p) => p.id).join(",")}`;
   useEffect(() => {
     const instance = map.current;
     if (!instance) return;
-    const points: L.LatLngTuple[] = [[me.lat, me.lng], ...producers.map((p) => [p.lat, p.lng] as L.LatLngTuple)];
-    instance.fitBounds(L.latLngBounds(points), { padding: [48, 48], maxZoom: 14 });
+    const points: L.LatLngTuple[] = [...(me ? [[me.lat, me.lng] as L.LatLngTuple] : []), ...producers.map((p) => [p.lat, p.lng] as L.LatLngTuple)];
+    if (points.length === 0) instance.setView(EMPTY_VIEW, 11);
+    else instance.fitBounds(L.latLngBounds(points), { padding: [48, 48], maxZoom: 14 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
@@ -89,15 +102,11 @@ export function MapboxMap({ producers, me, selected, onSelect }: Props) {
     const group = layer.current;
     if (!group) return;
     group.clearLayers();
-    const farthest = Math.max(1, ...producers.map((p) => p.distance_km ?? 0));
-    // the delivery reach around the buyer, as in the design
-    L.circle([me.lat, me.lng], {
-      radius: farthest * 1000,
-      stroke: false,
-      fillColor: "#7a8a5e",
-      fillOpacity: 0.08,
-      interactive: false,
-    }).addTo(group);
+    const farthest = Math.max(0, ...producers.map((p) => p.distance_km ?? 0));
+    if (me && farthest > 0) {
+      // the reach of the farms around the buyer, as in the design
+      L.circle([me.lat, me.lng], { radius: farthest * 1000, stroke: false, fillColor: "#7a8a5e", fillOpacity: 0.08, interactive: false }).addTo(group);
+    }
     for (const p of producers) {
       const on = selected === p.id;
       L.marker([p.lat, p.lng], {
@@ -109,7 +118,14 @@ export function MapboxMap({ producers, me, selected, onSelect }: Props) {
         .on("click", () => select.current(p.id))
         .addTo(group);
     }
-    L.marker([me.lat, me.lng], { icon: meIcon(me.label), interactive: false, zIndexOffset: 500 }).addTo(group);
+    if (me) {
+      L.marker([me.lat, me.lng], { icon: meIcon(me.label), draggable: !!move.current, title: "Arrastrá para corregir dónde está tu local", zIndexOffset: 500 })
+        .on("dragend", (e) => {
+          const { lat, lng } = (e.target as L.Marker).getLatLng();
+          move.current?.(lat, lng);
+        })
+        .addTo(group);
+    }
   }, [producers, me, selected]);
 
   return <div ref={container} className="mapbox-map" role="region" aria-label="Mapa de huertas cercanas" />;

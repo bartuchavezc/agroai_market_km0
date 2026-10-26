@@ -8,10 +8,13 @@ import { useSyncExternalStore } from "react";
 
 import type { Buyer } from "./api";
 
+/** Where the buyer's kitchen is: from their address, their device's location, or the pin moved on the map. */
 export interface Place {
   lat: number;
   lng: number;
   label: string;
+  /** The geocoded address, offered as the delivery address at checkout. */
+  address?: string | null;
 }
 
 export interface SavedOrder {

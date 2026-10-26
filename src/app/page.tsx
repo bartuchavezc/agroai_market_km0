@@ -7,31 +7,24 @@ import { useMemo, useState } from "react";
 import { Cart } from "@/components/Cart";
 import { Header } from "@/components/Header";
 import { ListingCard } from "@/components/ListingCard";
-import { NetworkMap } from "@/components/NetworkMap";
+import { PlacePicker } from "@/components/PlacePicker";
 import { type Category, marketApi } from "@/lib/api";
 import { CATEGORY_LABEL, km, plural, shortDay } from "@/lib/format";
 import { store, useStore } from "@/lib/store";
 
-// The real map (Mapbox, as in agroai_web-monitoring) needs the token; without it, the design's drawn map.
+// The map is Mapbox, as in agroai_web-monitoring: it needs NEXT_PUBLIC_MAPBOX_TOKEN (or a tile URL).
 const MapboxMap = dynamic(() => import("@/components/MapboxMap").then((m) => m.MapboxMap), { ssr: false });
 const REAL_MAP = !!(process.env.NEXT_PUBLIC_MAPBOX_TOKEN || process.env.NEXT_PUBLIC_MAP_TILES_URL);
 
-const DEFAULT_PLACE = {
-  lat: Number(process.env.NEXT_PUBLIC_DEFAULT_LAT ?? -34.8712),
-  lng: Number(process.env.NEXT_PUBLIC_DEFAULT_LNG ?? -58.0455),
-  label: process.env.NEXT_PUBLIC_DEFAULT_PLACE ?? "City Bell",
-};
-
 /** The buyer's home: a minimal map of the farms nearby, the farms row, what's available as cards, the cart. */
 export default function Home() {
-  const savedPlace = useStore((s) => s.place);
-  const place = savedPlace ?? DEFAULT_PLACE;
-  const near = useMemo(() => ({ lat: place.lat, lng: place.lng }), [place.lat, place.lng]);
-  const catalog = useQuery({ queryKey: ["catalog", near], queryFn: () => marketApi.catalog(near) });
+  // No assumed place: distances only once the buyer says where their kitchen is.
+  const place = useStore((s) => s.place);
+  const near = useMemo(() => (place ? { lat: place.lat, lng: place.lng } : undefined), [place]);
+  const catalog = useQuery({ queryKey: ["catalog", near ?? null], queryFn: () => marketApi.catalog(near) });
   const [farm, setFarm] = useState<string | null>(null);
   const [cat, setCat] = useState<Category | "todo">("todo");
   const [q, setQ] = useState("");
-  const [locating, setLocating] = useState(false);
 
   const data = catalog.data;
   const producers = useMemo(() => new Map((data?.producers ?? []).map((p) => [p.id, p])), [data]);
@@ -45,20 +38,9 @@ export default function Home() {
   );
   const cats = ["todo", ...new Set((data?.listings ?? []).map((l) => l.category))] as (Category | "todo")[];
   const farthest = Math.max(0, ...(data?.producers ?? []).map((p) => p.distance_km ?? 0));
-  const me = useMemo(() => ({ ...near, label: savedPlace ? "Tu local" : `Tu local · ${place.label}` }), [near, savedPlace, place.label]);
-
-  const locate = () => {
-    if (!navigator.geolocation) return;
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        store.setPlace({ lat: pos.coords.latitude, lng: pos.coords.longitude, label: "tu ubicación" });
-        setLocating(false);
-      },
-      () => setLocating(false),
-      { maximumAge: 600_000, timeout: 10_000 },
-    );
-  };
+  const me = useMemo(() => (place ? { lat: place.lat, lng: place.lng, label: "Tu local" } : null), [place]);
+  // Dragging the pin fixes an imprecise address: the place keeps its address, now "ajustado".
+  const moveMe = (lat: number, lng: number) => place && store.setPlace({ ...place, lat, lng, label: `${place.label.replace(/ \(ajustado\)$/, "")} (ajustado)` });
 
   return (
     <div className="page">
@@ -71,19 +53,10 @@ export default function Home() {
               {data && (
                 <span className="muted">
                   {plural(data.producers.length, "productor", "productores")}
-                  {farthest > 0 && ` en ${Math.ceil(farthest)} km de ${place.label}`} · próxima entrega consolidada {shortDay(data.delivery.date)}
-                  {" · "}
-                  {savedPlace ? (
-                    <button className="link-btn" onClick={() => store.setPlace(null)}>
-                      volver a {DEFAULT_PLACE.label}
-                    </button>
-                  ) : (
-                    <button className="link-btn" onClick={locate} disabled={locating}>
-                      {locating ? "ubicando…" : "usar mi ubicación"}
-                    </button>
-                  )}
+                  {place && farthest > 0 && ` a menos de ${Math.ceil(farthest)} km`} · próxima entrega consolidada {shortDay(data.delivery.date)}
                 </span>
               )}
+              <PlacePicker place={place} />
             </div>
             <input
               className="input"
@@ -96,12 +69,13 @@ export default function Home() {
           </div>
 
           <div className="map-frame">
-            {data &&
-              (REAL_MAP ? (
-                <MapboxMap producers={data.producers} me={me} selected={farm} onSelect={toggleFarm} />
-              ) : (
-                <NetworkMap producers={data.producers} me={me} selected={farm} onSelect={toggleFarm} />
-              ))}
+            {!REAL_MAP ? (
+              <div className="empty" style={{ height: "100%", display: "grid", placeItems: "center", border: 0 }}>
+                Falta configurar NEXT_PUBLIC_MAPBOX_TOKEN para mostrar el mapa.
+              </div>
+            ) : (
+              data && <MapboxMap producers={data.producers} me={me} selected={farm} onSelect={toggleFarm} onMoveMe={moveMe} />
+            )}
           </div>
 
           {catalog.isError && <div className="error">{catalog.error.message}</div>}

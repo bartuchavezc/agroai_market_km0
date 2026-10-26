@@ -32,23 +32,8 @@ button { font-family: var(--font-body); }
 
 /* — the map — */
 .map-frame { position: relative; height: 380px; border-radius: var(--radius-lg); overflow: hidden; background: var(--color-surface); box-shadow: var(--shadow-sm); }
-.network-map { width: 100%; height: 100%; }
-.network-map svg { display: block; width: 100%; height: 100%; }
-.network-map .st { stroke: var(--color-text); fill: none; stroke-linecap: round; }
-.network-map .pin { cursor: pointer; }
-.network-map .pin:focus-visible { outline: none; }
-.network-map .pin:focus-visible .dot { stroke: var(--color-accent); }
-.network-map .pin .dot { fill: var(--color-accent-2); stroke: var(--color-bg); stroke-width: 3; }
-.network-map .pin .lbl { fill: var(--color-bg); stroke: color-mix(in srgb, var(--color-text) 18%, transparent); stroke-width: 1; }
-.network-map .pin text { font: 600 12px var(--font-body); fill: var(--color-text); }
-.network-map .pin text tspan.d { font-weight: 400; fill: var(--color-neutral-700); }
-.network-map .pin:hover .dot, .network-map .pin.on .dot { fill: var(--color-accent-2-700); }
-.network-map .pin.on .lbl { fill: var(--color-accent-2-700); stroke: none; }
-.network-map .pin.on text, .network-map .pin.on text tspan.d { fill: var(--color-bg); }
-.network-map .pin.dim { opacity: 0.4; }
-.network-map .me-label { font: 600 12px var(--font-body); fill: var(--color-accent-800); }
 
-/* — the real map (Mapbox + Leaflet): the design's pins as HTML markers — */
+/* — Mapbox + Leaflet: the design's pins as HTML markers — */
 .mapbox-map { width: 100%; height: 100%; background: var(--color-surface); font-family: var(--font-body); }
 .mapbox-map .leaflet-control-attribution { font-size: 10px; background: color-mix(in srgb, var(--color-bg) 80%, transparent); }
 .mapbox-map .leaflet-bar a { color: var(--color-text); }
@@ -74,6 +59,20 @@ button { font-family: var(--font-body); }
   position: absolute; left: 34px; top: 0; white-space: nowrap; padding: 4px 12px; border-radius: 13px;
   background: var(--color-accent-100); font: 600 12px var(--font-body); color: var(--color-accent-800);
 }
+
+.map-me { cursor: grab; }
+
+/* — the buyer's place — */
+.place-picker { display: flex; flex-direction: column; gap: 6px; position: relative; max-width: 620px; }
+.place-results {
+  list-style: none; margin: 0; padding: 6px; border-radius: var(--radius-md); background: var(--color-bg);
+  box-shadow: var(--shadow-md); position: absolute; top: 46px; left: 0; right: 0; z-index: 1000;
+}
+.place-results button {
+  width: 100%; text-align: left; border: 0; background: none; padding: 8px 10px; border-radius: var(--radius-sm);
+  font-size: 13px; cursor: pointer; color: var(--color-text);
+}
+.place-results button:hover { background: var(--color-accent-2-100); }
 
 /* — farms row — */
 .farms { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; }

@@ -21,9 +21,12 @@ semanas, stock libre de la semana, disponible ahora / desde / preventa, precio) 
   con el número de pedido, abre `/pedido/<código>?t=<token>`. Este navegador guarda los enlaces en *Tus pedidos*
   (localStorage).
 - **Ubicación aproximada.** Las huertas aparecen en un punto redondeado a ~500 m: muchas son la casa de alguien.
-- **Mapa real con Mapbox** (Leaflet, el mismo `NEXT_PUBLIC_MAPBOX_TOKEN` que usa `agroai_web-monitoring`), estilo
-  `mapbox/light-v11` para que quede minimal como el diseño; los pines y etiquetas son los del diseño. Sin token, cae
-  al mapa dibujado del diseño (calles inventadas de fondo, huertas ubicadas por coordenadas).
+- **Mapa con Mapbox** (Leaflet, el mismo `NEXT_PUBLIC_MAPBOX_TOKEN` que usa `agroai_web-monitoring`), estilo
+  `mapbox/light-v11` para que quede minimal como el diseño, con los pines del diseño. Sin token no hay mapa.
+- **Ubicación del comprador.** No se asume ninguna: el comprador escribe la dirección de su local (geocoding Mapbox,
+  con Nominatim de respaldo, igual que monitoring) o usa la ubicación del dispositivo, que se descarta si el navegador
+  la da con más de 1,5 km de margen (sin GPS suele dar el centro de la provincia). El punto se puede arrastrar en el
+  mapa para corregirlo. La dirección se ofrece después como dirección de entrega.
 
 ## Desarrollo
 
