@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 
 import { Cart } from "@/components/Cart";
@@ -10,6 +11,10 @@ import { NetworkMap } from "@/components/NetworkMap";
 import { type Category, marketApi } from "@/lib/api";
 import { CATEGORY_LABEL, km, plural, shortDay } from "@/lib/format";
 import { store, useStore } from "@/lib/store";
+
+// The real map (Mapbox, as in agroai_web-monitoring) needs the token; without it, the design's drawn map.
+const MapboxMap = dynamic(() => import("@/components/MapboxMap").then((m) => m.MapboxMap), { ssr: false });
+const REAL_MAP = !!(process.env.NEXT_PUBLIC_MAPBOX_TOKEN || process.env.NEXT_PUBLIC_MAP_TILES_URL);
 
 const DEFAULT_PLACE = {
   lat: Number(process.env.NEXT_PUBLIC_DEFAULT_LAT ?? -34.8712),
@@ -91,7 +96,12 @@ export default function Home() {
           </div>
 
           <div className="map-frame">
-            {data && <NetworkMap producers={data.producers} me={me} selected={farm} onSelect={toggleFarm} />}
+            {data &&
+              (REAL_MAP ? (
+                <MapboxMap producers={data.producers} me={me} selected={farm} onSelect={toggleFarm} />
+              ) : (
+                <NetworkMap producers={data.producers} me={me} selected={farm} onSelect={toggleFarm} />
+              ))}
           </div>
 
           {catalog.isError && <div className="error">{catalog.error.message}</div>}

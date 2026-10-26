@@ -21,8 +21,9 @@ semanas, stock libre de la semana, disponible ahora / desde / preventa, precio) 
   con el número de pedido, abre `/pedido/<código>?t=<token>`. Este navegador guarda los enlaces en *Tus pedidos*
   (localStorage).
 - **Ubicación aproximada.** Las huertas aparecen en un punto redondeado a ~500 m: muchas son la casa de alguien.
-- El mapa es el dibujo inventado del diseño (calles, plazas, arroyo) como fondo; las huertas y tu local se ubican
-  encima por sus coordenadas.
+- **Mapa real con Mapbox** (Leaflet, el mismo `NEXT_PUBLIC_MAPBOX_TOKEN` que usa `agroai_web-monitoring`), estilo
+  `mapbox/light-v11` para que quede minimal como el diseño; los pines y etiquetas son los del diseño. Sin token, cae
+  al mapa dibujado del diseño (calles inventadas de fondo, huertas ubicadas por coordenadas).
 
 ## Desarrollo
 
